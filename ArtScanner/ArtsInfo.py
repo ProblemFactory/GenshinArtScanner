@@ -97,6 +97,8 @@ ArtNames = [
     ["游医的银莲", "游医的枭羽", "游医的怀钟", "游医的药壶", "游医的方巾"],
     ["勋绩之花", "昭武翎羽", "金铜时晷", "盟誓金爵", "将帅兜鏊"],
     ["无垢之花", "贤医之羽", "停摆之刻", "超越之盏", "嗤笑之面"],
+    ["祈望之心", "思忆之矢", "无常之面", "羁缠之花", "朝露之时"],
+    ["绯花之壶", "切落之羽", "华饰之兜", "明威之镡", "雷云之笼"]
 ]
 Users = [
     "空",
@@ -193,6 +195,8 @@ SetNamesGenshinArt = [
     "travelingDoctor",  # 游医
     "tenacityOfTheMillelith",  # 千岩牢固
     "paleFlame",  # 苍白之火
+    "shimenawaReminiscence", # 追忆之注连
+    "emblemOfSeveredFate", # 绝缘之旗印
 ]
 
 
@@ -254,4 +258,6 @@ SetNamesMingyuLab = [
     "traveling_doctor",  # 游医
     "tenacity_of_the_millelith",  # 千岩牢固
     "pale_flame",  # 苍白之火
+    "reminiscence_of_shime", # 追忆之注连
+    "seal_of_insulation", # 绝缘之旗印
 ]
