@@ -10,7 +10,7 @@ import logging
 from tensorflow import get_logger
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers.experimental.preprocessing import StringLookup
-from tensorflow.keras.layers import Input, Reshape, Dense, Dropout, Bidirectional, LSTM
+from tensorflow.keras.layers import Input, Reshape, Dense, Dropout, Bidirectional, LSTM, Flatten
 from tensorflow.keras.backend import ctc_decode
 from mobilenetv3 import MobileNetV3_Small
 from tensorflow.strings import reduce_join
@@ -33,13 +33,13 @@ class Config:
     subattr_4_coords = [67, 636, 560, 676]
 
 class OCR:
-    def __init__(self, model_weight='mn_model_weight.h5', scale_ratio=1):
+    def __init__(self, model_weight='mn_model_weight.h5', scale_ratio=1, ocr_model_artnames=None):
         self.scale_ratio = scale_ratio
         self.characters = sorted(
                                 [
                                     *set(
                                         "".join(
-                                            sum(ArtsInfo.ArtNames, [])
+                                            sum(ArtsInfo.ArtNames[:-2], [])
                                             + ArtsInfo.TypeNames
                                             + list(ArtsInfo.MainAttrNames.values())
                                             + list(ArtsInfo.SubAttrNames.values())
@@ -63,12 +63,14 @@ class OCR:
         self.max_length = 15
         self.build_model(input_shape=(self.width, self.height))
         self.model.load_weights(model_weight)
+        self.ocr_model_artnames = ocr_model_artnames
 
     def detect_info(self, art_img):
         info = self.extract_art_info(art_img)
         x = np.concatenate([self.preprocess(info[key]).T[None, :, :, None] for key in sorted(info.keys())], axis=0)
         y = self.model.predict(x)
         y = self.decode(y)
+        y[3] = self.ocr_model_artnames.reg(x[3][None])
         return {**{key:v for key, v in zip(sorted(info.keys()), y)}, **{'star':self.detect_star(art_img)}}
 
     def extract_art_info(self, art_img):
@@ -199,3 +201,50 @@ class OCR:
 
         # Define the model
         self.model = Model(inputs=[input_img], outputs=output, name="ocr_model_v1")
+        
+class OCR_artnames:
+    def __init__(self, model_weight='mn_model_weight_artnames.h5'):
+        self.artnames = sorted(set(sum(ArtsInfo.ArtNames, [])))
+
+        self.model = self.build_model(input_shape=(240, 16))
+        self.model.load_weights(model_weight)
+        
+    def build_model(self, input_shape):
+        input_img = Input(
+            shape=(input_shape[0], input_shape[1], 1), name="image", dtype="float32"
+        )
+        mobilenet = MobileNetV3_Small(
+            (input_shape[0], input_shape[1], 1), 0, alpha=1.0, include_top=False
+        ).build()
+        x = mobilenet(input_img)
+        new_shape = ((input_shape[0] // 8), (input_shape[1] // 8) * 576)
+        x = Reshape(target_shape=new_shape, name="reshape")(x)
+        x = Dense(64, activation="relu", name="dense1")(x)
+        x = Dropout(0.2)(x)
+
+        # RNNs
+        x = Bidirectional(LSTM(128, return_sequences=True, dropout=0.25))(x)
+        x = Bidirectional(LSTM(64, return_sequences=True, dropout=0.25))(x)
+
+        # Output layer
+        x = Flatten(name="flatten")(x)
+        x = Dense(
+            len(self.artnames), activation="softmax", name="dense2"
+        )(x)
+
+        output = x
+
+        # Define the model
+        model = Model(inputs=[input_img], outputs=output, name="ocr_model_artnames")
+        
+        return model
+    
+    def decode_single(self, pred):
+        i = pred[0].argmax()
+        if pred[0][i] > 0.75:
+            return self.artnames[i]
+        else:
+            return 'Unknown'
+   
+    def reg(self, x):
+        return self.decode_single(self.model.predict(x))

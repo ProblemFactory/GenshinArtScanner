@@ -25,7 +25,7 @@ if not is_admin():
 
 import win32gui
 import time
-import keyboard, mouse
+import mouse
 import os
 import json
 import ocr
@@ -90,7 +90,8 @@ game_info.calculateCoordinates()
 # margin near level number, color=233,229,220
 
 # initialization
-ocr_model = ocr.OCR(scale_ratio=game_info.scale_ratio, model_weight=os.path.join(bundle_dir, 'mn_model_weight.h5'))
+ocr_model = ocr.OCR(scale_ratio=game_info.scale_ratio, model_weight=os.path.join(bundle_dir, 'mn_model_weight.h5'), 
+                    ocr_model_artnames=ocr.OCR_artnames(model_weight=os.path.join(bundle_dir, 'mn_model_weight_artnames.h5')))
 art_id = 0
 saved = 0
 skipped = 0
@@ -98,8 +99,6 @@ failed = 0
 star_dist = [0,0,0,0,0]
 star_dist_saved = [0,0,0,0,0]
 
-
-os.makedirs('artifacts', exist_ok=True)
 
 input('请打开圣遗物背包界面，最好翻到圣遗物列表最上面。按回车继续')
 print('---------------------------------')
@@ -116,6 +115,7 @@ if input('是否进行高级设置，例如等级过滤，稀有度过滤，翻�
     level_threshold = input('请输入圣遗物等级阈值(0-20)(比如：16，则仅将保存16级及以上的圣遗物信息)。直接按回车则默认保存所有圣遗物信息。')
     rarity_threshold = input('请输入圣遗物星级阈值(1-5)(比如：5，则仅将保存5星的圣遗物信息)。直接按回车则默认保存所有圣遗物信息。')
     scroll_interval = input('请输入翻页时的检测延迟（秒），数值越大翻页速度越慢，可以解决一些翻页时的检测BUG，直接回车则为默认值0.05。')
+    save_all = input('请输入是否保存所有圣遗物截图，若是，请输入y，直接按回车则默认不保存。')
 print('---------------------------------')
 print('程序将于5秒后自动开始运行，若此条提示显示时未自动切换到原神窗口，请手动点击原神窗口切到前台')
 
@@ -144,7 +144,15 @@ try:
 except:
     exporter = art_data.exportGenshinArtJSON
     export_name = 'artifacts.genshinart.json'
+try:
+    save_all = save_all.lower().startswith('y')
+except:
+    save_all = False
 
+
+os.makedirs('artifacts', exist_ok=True)
+if save_all:
+    os.makedirs('artifacts-all', exist_ok=True)
 
 mouse.on_middle_click(art_scanner.interrupt)
 
@@ -160,7 +168,15 @@ def artscannerCallback(art_img):
     global skipped
     global failed
     global star_dist
+    global save_all
+    if save_all:
+        art_img.save(f'artifacts-all/{art_id}.png')
     info = ocr_model.detect_info(art_img)
+
+    # 修复部分错误识别
+    if info['main_attr_name'] == '生命值' and info['main_attr_value'] == '3,957':
+        info['main_attr_value'] = '3,967'
+
     star_dist[info['star']-1] += 1
     if decodeValue(info['level'])<level_threshold or decodeValue(info['star'])<rarity_threshold:
         skipped += 1

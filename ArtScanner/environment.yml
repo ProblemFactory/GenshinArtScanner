@@ -1,7 +1,7 @@
 name: ArtScanner
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
   - msys2
 dependencies:
   - _tflow_select=2.3.0=eigen
@@ -117,4 +117,3 @@ dependencies:
     - keyboard==0.13.5
     - mouse==0.7.1
     - mss==6.1.0
-prefix: C:\Users\marti\miniforge3\envs\ArtScanner
