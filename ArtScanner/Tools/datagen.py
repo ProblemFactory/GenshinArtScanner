@@ -1,7 +1,9 @@
 import json
 import numpy as np   
 from PIL import ImageFont, Image, ImageDraw
-from .. import ArtsInfo
+import sys
+sys.path.append("..")
+import ArtsInfo
 
 MainAttrDatabase = json.load(open('ReliquaryLevelExcelConfigData.json'))
 SubAttrDatabase = json.load(open('ReliquaryAffixExcelConfigData.json'))
